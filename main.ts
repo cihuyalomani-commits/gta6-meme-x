@@ -6,12 +6,13 @@
 // root to /output/POST.json, where the gate reads it. The run is fully
 // deterministic: the same input bytes always produce the same output bytes.
 //
-// The joke: a WANTED poster for Grand Theft Auto VI itself — six stars (GTA's
-// wanted level, and GTA *6*), last seen in 2013, with a $500 reward paid by
-// my AI agent on make.fun. The make.fun ghost is the wanted suspect, holding
-// its magenta star coin. No other wanted poster is on the live leaderboard:
-// it is full of document-style memes (receipts, bills, citations, boarding
-// passes), all "13 years late" jokes.
+// The joke: a LEONIDA POST delivery notice for a parcel that has been in
+// transit for 13 years. The live leaderboard is dominated by document-style
+// memes (receipts, bills, citations, boarding passes, all "13 years late"
+// jokes) — a postal delivery notice is a document type not on it yet, with
+// the same punch: parcel GTA VI, attempted delivery 17 Sep 2013, 4,811 days
+// in transit, still waiting, postage $0.00 paid by my AI agent on make.fun,
+// stamped UNDELIVERABLE. The make.fun ghost signs the bottom of the sheet.
 //
 // Outside the grader's container, MAKEFUN_BOT_DIR and MAKEFUN_OUTPUT_DIR
 // stand in for /bot and /output:
@@ -33,56 +34,72 @@ const H = 675;
 
 type RGB = [number, number, number];
 
-const WHITE: RGB = [255, 255, 255];
 const BLACK: RGB = [0, 0, 0];
 const MAGENTA: RGB = [224, 33, 138];
-const PAPER: RGB = [242, 226, 184]; // aged poster paper
-const GOLD: RGB = [255, 196, 40]; // wanted stars
-const RED: RGB = [176, 32, 32]; // last-seen / reward lines
-const NAVY: RGB = [30, 34, 62]; // mugshot backdrop
+const PAPER: RGB = [250, 246, 234]; // off-white delivery-notice paper
+const RED: RGB = [176, 32, 32]; // stamp + standout figures
+const NAVY: RGB = [30, 34, 62]; // header + sheet frame
+const INK: RGB = [25, 25, 25]; // body text
+const SLATE: RGB = [35, 41, 56]; // desk background behind the sheet
+const GREY: RGB = [96, 96, 96]; // small reference line
+const SENTINEL: RGB = [255, 0, 255]; // transparent marker in the stamp buffer
 
-const px = new Uint8Array(W * H * 3);
-
-function setPx(x: number, y: number, c: RGB): void {
-  if (x < 0 || x >= W || y < 0 || y >= H) return;
-  const i = (y * W + x) * 3;
-  px[i] = c[0];
-  px[i + 1] = c[1];
-  px[i + 2] = c[2];
+interface Canvas {
+  w: number;
+  h: number;
+  px: Uint8Array;
 }
 
-function fillRect(x: number, y: number, w: number, h: number, c: RGB): void {
+function makeCanvas(w: number, h: number, fill: RGB): Canvas {
+  const px = new Uint8Array(w * h * 3);
+  for (let i = 0; i < w * h; i++) {
+    px[i * 3] = fill[0];
+    px[i * 3 + 1] = fill[1];
+    px[i * 3 + 2] = fill[2];
+  }
+  return { w, h, px };
+}
+
+function setPx(cv: Canvas, x: number, y: number, c: RGB): void {
+  if (x < 0 || x >= cv.w || y < 0 || y >= cv.h) return;
+  const i = (y * cv.w + x) * 3;
+  cv.px[i] = c[0];
+  cv.px[i + 1] = c[1];
+  cv.px[i + 2] = c[2];
+}
+
+function fillRect(cv: Canvas, x: number, y: number, w: number, h: number, c: RGB): void {
   const x0 = Math.max(0, Math.floor(x));
   const y0 = Math.max(0, Math.floor(y));
-  const x1 = Math.min(W, Math.ceil(x + w));
-  const y1 = Math.min(H, Math.ceil(y + h));
+  const x1 = Math.min(cv.w, Math.ceil(x + w));
+  const y1 = Math.min(cv.h, Math.ceil(y + h));
   for (let yy = y0; yy < y1; yy++) {
-    for (let xx = x0; xx < x1; xx++) setPx(xx, yy, c);
+    for (let xx = x0; xx < x1; xx++) setPx(cv, xx, yy, c);
   }
 }
 
-function fillCircle(cx: number, cy: number, r: number, c: RGB): void {
+function fillCircle(cv: Canvas, cx: number, cy: number, r: number, c: RGB): void {
   const r2 = r * r;
   for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
     for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
       const dx = x - cx;
       const dy = y - cy;
-      if (dx * dx + dy * dy <= r2) setPx(x, y, c);
+      if (dx * dx + dy * dy <= r2) setPx(cv, x, y, c);
     }
   }
 }
 
 // Thick line: stamp circles along the segment.
-function drawLine(x0: number, y0: number, x1: number, y1: number, w: number, c: RGB): void {
+function drawLine(cv: Canvas, x0: number, y0: number, x1: number, y1: number, w: number, c: RGB): void {
   const steps = Math.ceil(Math.hypot(x1 - x0, y1 - y0));
   for (let i = 0; i <= steps; i++) {
     const t = steps === 0 ? 0 : i / steps;
-    fillCircle(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, w / 2, c);
+    fillCircle(cv, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, w / 2, c);
   }
 }
 
 // Scanline polygon fill (even-odd).
-function fillPoly(pts: Array<[number, number]>, c: RGB): void {
+function fillPoly(cv: Canvas, pts: Array<[number, number]>, c: RGB): void {
   let minY = Infinity;
   let maxY = -Infinity;
   for (const [, y] of pts) {
@@ -100,25 +117,26 @@ function fillPoly(pts: Array<[number, number]>, c: RGB): void {
     }
     xs.sort((a, b) => a - b);
     for (let i = 0; i + 1 < xs.length; i += 2) {
-      fillRect(Math.round(xs[i]), y, Math.round(xs[i + 1]) - Math.round(xs[i]), 1, c);
+      fillRect(cv, Math.round(xs[i]), y, Math.round(xs[i + 1]) - Math.round(xs[i]), 1, c);
     }
   }
 }
 
 // Five-pointed star, rotation points up.
-function fillStar(cx: number, cy: number, outer: number, inner: number, c: RGB): void {
+function fillStar(cv: Canvas, cx: number, cy: number, outer: number, inner: number, c: RGB): void {
   const pts: Array<[number, number]> = [];
   for (let i = 0; i < 10; i++) {
     const r = i % 2 === 0 ? outer : inner;
     const a = -Math.PI / 2 + (i * Math.PI) / 5;
     pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
   }
-  fillPoly(pts, c);
+  fillPoly(cv, pts, c);
 }
 
 // Four-pointed sparkle: long vertical, short horizontal arms.
-function fillSparkle(cx: number, cy: number, long: number, short: number, c: RGB): void {
+function fillSparkle(cv: Canvas, cx: number, cy: number, long: number, short: number, c: RGB): void {
   fillPoly(
+    cv,
     [
       [cx, cy - long],
       [cx + short, cy - short],
@@ -183,25 +201,18 @@ const FONT: Record<string, string[]> = {
   ',': ['.....', '.....', '.....', '.....', '.##..', '.##..', '.#...'],
   ':': ['.....', '.##..', '.##..', '.....', '.##..', '.##..', '.....'],
   '?': ['.###.', '#...#', '....#', '...#.', '..#..', '.....', '..#..'],
-  a: ['.....', '.....', '.###.', '....#', '.####', '#...#', '.###.'],
-  e: ['.....', '.....', '.###.', '#...#', '#####', '#....', '.###.'],
-  f: ['..##.', '.#...', '.#...', '####.', '.#...', '.#...', '.#...'],
-  k: ['.....', '#....', '#..#.', '#.#..', '##...', '#.#..', '#..#.'],
-  m: ['.....', '.....', '##.#.', '#.#.#', '#.#.#', '#.#.#', '#.#.#'],
-  n: ['.....', '.....', '##.#.', '#..##', '#...#', '#...#', '#...#'],
-  u: ['.....', '.....', '#...#', '#...#', '#...#', '#..##', '.##.#'],
 };
 
 function textWidth(text: string, scale: number): number {
   return text.length * 6 * scale - scale;
 }
 
-function drawGlyph(ch: string, x: number, y: number, scale: number, c: RGB): void {
+function drawGlyph(cv: Canvas, ch: string, x: number, y: number, scale: number, c: RGB): void {
   const rows = FONT[ch] ?? FONT['?'];
   for (let r = 0; r < 7; r++) {
     for (let col = 0; col < 5; col++) {
       if (rows[r][col] === '#') {
-        fillRect(x + col * scale, y + r * scale, scale, scale, c);
+        fillRect(cv, x + col * scale, y + r * scale, scale, scale, c);
       }
     }
   }
@@ -221,103 +232,219 @@ function outlineOffsets(scale: number): Array<[number, number]> {
   ];
 }
 
-// Left-aligned text with a thick outline.
-function drawTextLeft(text: string, x0: number, y: number, scale: number, fg: RGB, ol: RGB): void {
-  for (const [dx, dy] of outlineOffsets(scale)) {
-    let x = x0 + dx;
-    for (const ch of text) {
-      drawGlyph(ch, x, y + dy, scale, ol);
-      x += 6 * scale;
+// Left-aligned text. With an outline color it gets a thick halo; without one
+// it is drawn flat (used for the stamp, where the halo would smear the paper).
+function drawTextLeft(
+  cv: Canvas,
+  text: string,
+  x0: number,
+  y: number,
+  scale: number,
+  fg: RGB,
+  ol: RGB | null,
+): void {
+  if (ol !== null) {
+    for (const [dx, dy] of outlineOffsets(scale)) {
+      let x = x0 + dx;
+      for (const ch of text) {
+        drawGlyph(cv, ch, x, y + dy, scale, ol);
+        x += 6 * scale;
+      }
     }
   }
   let x = x0;
   for (const ch of text) {
-    drawGlyph(ch, x, y, scale, fg);
+    drawGlyph(cv, ch, x, y, scale, fg);
     x += 6 * scale;
   }
 }
 
-// Centered text with a thick outline, meme style.
-function drawText(text: string, cx: number, y: number, scale: number, fg: RGB, ol: RGB): void {
-  drawTextLeft(text, Math.round(cx - textWidth(text, scale) / 2), y, scale, fg, ol);
+// Centered text with a thick outline.
+function drawText(cv: Canvas, text: string, cx: number, y: number, scale: number, fg: RGB, ol: RGB): void {
+  drawTextLeft(cv, text, Math.round(cx - textWidth(text, scale) / 2), y, scale, fg, ol);
+}
+
+// Centered line made of several colored parts (e.g. a black label and a red
+// figure). Outlines for all parts are drawn first so no halo paints over a
+// neighbour's letters.
+function drawCenteredParts(
+  cv: Canvas,
+  parts: Array<{ text: string; fg: RGB }>,
+  cx: number,
+  y: number,
+  scale: number,
+  ol: RGB,
+): void {
+  const total = parts.reduce((acc, p) => acc + textWidth(p.text, scale), 0) + (parts.length - 1) * scale;
+  let x = Math.round(cx - total / 2);
+  for (const [dx, dy] of outlineOffsets(scale)) {
+    let px = x + dx;
+    for (const p of parts) {
+      for (const ch of p.text) {
+        drawGlyph(cv, ch, px, y + dy, scale, ol);
+        px += 6 * scale;
+      }
+      px += scale;
+    }
+  }
+  for (const p of parts) {
+    for (const ch of p.text) {
+      drawGlyph(cv, ch, x, y, scale, p.fg);
+      x += 6 * scale;
+    }
+    x += scale;
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Scene: a WANTED poster. The make.fun ghost is the suspect, in a mugshot
-// frame under six gold wanted stars.
+// Scene: a LEONIDA POST delivery notice. The make.fun ghost signs the sheet.
 // ---------------------------------------------------------------------------
 
-function drawGhostAt(cx: number, cy: number, s: number): void {
+function drawGhostAt(cv: Canvas, cx: number, cy: number, s: number): void {
   const R = (v: number): number => v * s;
   // Black outline, drawn slightly larger, then the white body.
-  fillCircle(cx, cy, R(75), BLACK);
-  fillRect(cx - R(75), cy - R(5), R(150), R(95), BLACK);
-  fillCircle(cx - R(62), cy + R(102), R(24), BLACK);
-  fillCircle(cx, cy + R(102), R(24), BLACK);
-  fillCircle(cx + R(62), cy + R(102), R(24), BLACK);
-  fillCircle(cx, cy, R(70), WHITE);
-  fillRect(cx - R(70), cy, R(140), R(85), WHITE);
-  fillCircle(cx - R(62), cy + R(98), R(20), WHITE);
-  fillCircle(cx, cy + R(98), R(20), WHITE);
-  fillCircle(cx + R(62), cy + R(98), R(20), WHITE);
+  fillCircle(cv, cx, cy, R(75), BLACK);
+  fillRect(cv, cx - R(75), cy - R(5), R(150), R(95), BLACK);
+  fillCircle(cv, cx - R(62), cy + R(102), R(24), BLACK);
+  fillCircle(cv, cx, cy + R(102), R(24), BLACK);
+  fillCircle(cv, cx + R(62), cy + R(102), R(24), BLACK);
+  fillCircle(cv, cx, cy, R(70), [255, 255, 255]);
+  fillRect(cv, cx - R(70), cy, R(140), R(85), [255, 255, 255]);
+  fillCircle(cv, cx - R(62), cy + R(98), R(20), [255, 255, 255]);
+  fillCircle(cv, cx, cy + R(98), R(20), [255, 255, 255]);
+  fillCircle(cv, cx + R(62), cy + R(98), R(20), [255, 255, 255]);
   // Two black four-pointed sparkle eyes.
-  fillSparkle(cx - R(26), cy + R(8), R(17), R(6), BLACK);
-  fillSparkle(cx + R(26), cy + R(8), R(17), R(6), BLACK);
+  fillSparkle(cv, cx - R(26), cy + R(8), R(17), R(6), BLACK);
+  fillSparkle(cv, cx + R(26), cy + R(8), R(17), R(6), BLACK);
   // Round little hand, holding the coin.
-  fillCircle(cx + R(62), cy + R(62), R(17), BLACK);
-  fillCircle(cx + R(62), cy + R(62), R(13), WHITE);
-  drawLine(cx + R(66), cy + R(68), cx + R(76), cy + R(92), R(10), BLACK);
-  drawLine(cx + R(66), cy + R(68), cx + R(76), cy + R(92), R(6), WHITE);
+  fillCircle(cv, cx + R(62), cy + R(62), R(17), BLACK);
+  fillCircle(cv, cx + R(62), cy + R(62), R(13), [255, 255, 255]);
+  drawLine(cv, cx + R(66), cy + R(68), cx + R(76), cy + R(92), R(10), BLACK);
+  drawLine(cv, cx + R(66), cy + R(68), cx + R(76), cy + R(92), R(6), [255, 255, 255]);
   // Magenta coin with a white star.
-  fillCircle(cx + R(82), cy + R(104), R(34), BLACK);
-  fillCircle(cx + R(82), cy + R(104), R(30), MAGENTA);
-  fillStar(cx + R(82), cy + R(104), R(17), R(7), WHITE);
+  fillCircle(cv, cx + R(82), cy + R(104), R(34), BLACK);
+  fillCircle(cv, cx + R(82), cy + R(104), R(30), MAGENTA);
+  fillStar(cv, cx + R(82), cy + R(104), R(17), R(7), [255, 255, 255]);
 }
 
-function drawScene(): void {
-  // Aged paper.
-  fillRect(0, 0, W, H, PAPER);
-  // Outer black frame + thin inner frame.
-  fillRect(0, 0, W, 14, BLACK);
-  fillRect(0, H - 14, W, 14, BLACK);
-  fillRect(0, 0, 14, H, BLACK);
-  fillRect(W - 14, 0, 14, H, BLACK);
-  fillRect(22, 22, W - 44, 2, BLACK);
-  fillRect(22, H - 24, W - 44, 2, BLACK);
-  fillRect(22, 22, 2, H - 44, BLACK);
-  fillRect(W - 24, 22, 2, H - 44, BLACK);
+// The red UNDELIVERABLE stamp, drawn flat on its own buffer (sentinel =
+// transparent) and then blitted rotated onto the sheet.
+function makeStamp(): Canvas {
+  const SW = 350;
+  const SH = 96;
+  const st = makeCanvas(SW, SH, SENTINEL);
+  // Double border.
+  fillRect(st, 0, 0, SW, 3, RED);
+  fillRect(st, 0, SH - 3, SW, 3, RED);
+  fillRect(st, 0, 0, 3, SH, RED);
+  fillRect(st, SW - 3, 0, 3, SH, RED);
+  fillRect(st, 7, 7, SW - 14, 2, RED);
+  fillRect(st, 7, SH - 9, SW - 14, 2, RED);
+  fillRect(st, 7, 7, 2, SH - 14, RED);
+  fillRect(st, SW - 9, 7, 2, SH - 14, RED);
+  // Two lines, no outline: the stamp ink sits straight on the paper.
+  drawTextLeft(st, 'UNDELIVERABLE', Math.round((SW - textWidth('UNDELIVERABLE', 4)) / 2), 12, 4, RED, null);
+  drawTextLeft(st, 'RECIPIENT STILL WAITING', Math.round((SW - textWidth('RECIPIENT STILL WAITING', 2)) / 2), 52, 2, RED, null);
+  return st;
+}
+
+function blitRotated(cv: Canvas, src: Canvas, cx: number, cy: number, angleDeg: number): void {
+  const a = (angleDeg * Math.PI) / 180;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  const hw = (src.w * Math.abs(cos) + src.h * Math.abs(sin)) / 2;
+  const hh = (src.w * Math.abs(sin) + src.h * Math.abs(cos)) / 2;
+  for (let dy = Math.floor(cy - hh); dy <= Math.ceil(cy + hh); dy++) {
+    for (let dx = Math.floor(cx - hw); dx <= Math.ceil(cx + hw); dx++) {
+      const rx = dx - cx;
+      const ry = dy - cy;
+      const sx = Math.round(cos * rx + sin * ry + src.w / 2);
+      const sy = Math.round(-sin * rx + cos * ry + src.h / 2);
+      if (sx < 0 || sx >= src.w || sy < 0 || sy >= src.h) continue;
+      const si = (sy * src.w + sx) * 3;
+      if (src.px[si] === SENTINEL[0] && src.px[si + 1] === SENTINEL[1] && src.px[si + 2] === SENTINEL[2]) continue;
+      setPx(cv, dx, dy, [src.px[si], src.px[si + 1], src.px[si + 2]]);
+    }
+  }
+}
+
+function drawScene(cv: Canvas): void {
+  // Desk background, then the paper sheet.
+  fillRect(cv, 0, 0, W, H, SLATE);
+  fillRect(cv, 90, 25, 1020, 635, PAPER);
+  // Sheet frame: 3px navy border + thin inner line.
+  fillRect(cv, 90, 25, 1020, 3, NAVY);
+  fillRect(cv, 90, 657, 1020, 3, NAVY);
+  fillRect(cv, 90, 25, 3, 635, NAVY);
+  fillRect(cv, 1107, 25, 3, 635, NAVY);
+  fillRect(cv, 102, 37, 996, 1, NAVY);
+  fillRect(cv, 102, 648, 996, 1, NAVY);
+  fillRect(cv, 102, 37, 1, 612, NAVY);
+  fillRect(cv, 1097, 37, 1, 612, NAVY);
 
   // Header.
-  drawText("LEONIDA COUNTY SHERIFF'S OFFICE", 600, 34, 3, BLACK, PAPER);
-  drawText('WANTED', 600, 62, 15, BLACK, PAPER);
+  drawText(cv, 'LEONIDA POST', 600, 52, 7, NAVY, PAPER);
+  drawText(cv, 'DELIVERY NOTICE', 600, 118, 5, NAVY, PAPER);
+  fillRect(cv, 150, 133, 210, 2, NAVY);
+  fillRect(cv, 840, 133, 210, 2, NAVY);
+  fillRect(cv, 130, 170, 940, 3, NAVY);
 
-  // Six gold wanted stars, one for each GTA.
-  const starXs = [200, 360, 520, 680, 840, 1000];
-  for (const x of starXs) {
-    fillStar(x, 200, 34, 14, BLACK);
-    fillStar(x, 200, 28, 12, GOLD);
-  }
+  // The notice rows.
+  drawText(cv, 'PARCEL: GRAND THEFT AUTO VI', 600, 198, 5, INK, PAPER);
+  drawText(cv, 'ATTEMPTED DELIVERY: 17 SEP 2013', 600, 258, 5, INK, PAPER);
+  drawCenteredParts(
+    cv,
+    [
+      { text: 'DAYS IN TRANSIT: ', fg: INK },
+      { text: '4,811', fg: RED },
+    ],
+    600,
+    318,
+    5,
+    PAPER,
+  );
+  drawCenteredParts(
+    cv,
+    [
+      { text: 'STATUS: ', fg: INK },
+      { text: 'STILL WAITING', fg: RED },
+    ],
+    600,
+    378,
+    5,
+    PAPER,
+  );
+  drawCenteredParts(
+    cv,
+    [
+      { text: 'POSTAGE DUE: ', fg: INK },
+      { text: '$0.00', fg: RED },
+    ],
+    600,
+    438,
+    5,
+    PAPER,
+  );
+  drawCenteredParts(
+    cv,
+    [
+      { text: 'PAID BY MY AI AGENT ON ', fg: INK },
+      { text: 'MAKE.FUN', fg: MAGENTA },
+    ],
+    600,
+    498,
+    5,
+    PAPER,
+  );
 
-  // Mugshot frame with the make.fun ghost as the suspect.
-  fillRect(440, 240, 320, 216, NAVY);
-  fillRect(440, 240, 320, 4, BLACK);
-  fillRect(440, 452, 320, 4, BLACK);
-  fillRect(440, 240, 4, 216, BLACK);
-  fillRect(756, 240, 4, 216, BLACK);
-  drawGhostAt(600, 340, 0.9);
+  // The make.fun ghost signs the bottom-left of the sheet.
+  drawGhostAt(cv, 200, 590, 0.44);
 
-  // The charge, the last sighting, the reward.
-  drawText('GRAND THEFT AUTO VI', 600, 468, 6, BLACK, PAPER);
-  drawText('LAST SEEN: 2013', 600, 520, 5, RED, PAPER);
-  drawText('REWARD: $500', 600, 564, 6, RED, PAPER);
+  // Small reference line, bottom-right.
+  drawTextLeft(cv, 'REF: GTA-VI-2013', 1050 - textWidth('REF: GTA-VI-2013', 2), 622, 2, GREY, null);
 
-  // The payoff line: make.fun in magenta so it cannot be missed.
-  const line = 'PAID BY MY AI AGENT ON make.fun';
-  const part1 = 'PAID BY MY AI AGENT ON ';
-  const scale = 4;
-  const x0 = Math.round(600 - textWidth(line, scale) / 2);
-  drawTextLeft(part1, x0, 614, scale, BLACK, PAPER);
-  drawTextLeft('make.fun', x0 + part1.length * 6 * scale, 614, scale, MAGENTA, PAPER);
+  // The red stamp, slightly rotated, across the bottom centre.
+  blitRotated(cv, makeStamp(), 600, 598, -5);
 }
 
 // ---------------------------------------------------------------------------
@@ -346,20 +473,20 @@ function pngChunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([len, body, crc]);
 }
 
-function encodePNG(): Buffer {
+function encodePNG(cv: Canvas): Buffer {
   const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(W, 0);
-  ihdr.writeUInt32BE(H, 4);
+  ihdr.writeUInt32BE(cv.w, 0);
+  ihdr.writeUInt32BE(cv.h, 4);
   ihdr[8] = 8; // bit depth
   ihdr[9] = 2; // color type 2 = RGB
   ihdr[10] = 0; // compression
   ihdr[11] = 0; // filter
   ihdr[12] = 0; // interlace
 
-  const raw = Buffer.alloc(H * (1 + W * 3));
-  for (let y = 0; y < H; y++) {
-    raw[y * (1 + W * 3)] = 0; // filter: none
-    raw.set(px.subarray(y * W * 3, (y + 1) * W * 3), y * (1 + W * 3) + 1);
+  const raw = Buffer.alloc(cv.h * (1 + cv.w * 3));
+  for (let y = 0; y < cv.h; y++) {
+    raw[y * (1 + cv.w * 3)] = 0; // filter: none
+    raw.set(cv.px.subarray(y * cv.w * 3, (y + 1) * cv.w * 3), y * (1 + cv.w * 3) + 1);
   }
 
   return Buffer.concat([
@@ -374,9 +501,10 @@ function encodePNG(): Buffer {
 // Run
 // ---------------------------------------------------------------------------
 
-drawScene();
+const main = makeCanvas(W, H, SLATE);
+drawScene(main);
 mkdirSync(OUTPUT_DIR, { recursive: true });
-writeFileSync(join(OUTPUT_DIR, 'meme.png'), encodePNG());
+writeFileSync(join(OUTPUT_DIR, 'meme.png'), encodePNG(main));
 try {
   copyFileSync(join(BOT_DIR, 'POST.json'), join(OUTPUT_DIR, 'POST.json'));
 } catch (err) {

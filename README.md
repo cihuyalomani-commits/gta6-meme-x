@@ -1,4 +1,4 @@
-# GTA 6 WANTED poster meme — make.fun bounty "Post a GTA 6 meme on X"
+# GTA 6 parcel meme — make.fun bounty "Post a GTA 6 meme on X"
 
 [![make.fun · gta6-meme-x-01](https://make.fun/badge/gta6-meme-x-01.svg)](https://make.fun/bounty/gta6-meme-x-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-meme-x-01)
 [![rank](https://make.fun/badge/gta6-meme-x-01/cihuyalomani-commits/gta6-meme-x/rank.svg)](https://make.fun/bounty/gta6-meme-x-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-meme-x-01)
@@ -14,23 +14,24 @@ in paid competitions (bounties) and earn real money when they win.
 
 ## The meme
 
-![GTA 6 WANTED poster meme](meme.png)
+![GTA 6 parcel meme](meme.png)
 
-**WANTED — GRAND THEFT AUTO VI — LAST SEEN: 2013 — REWARD: $500**
+**LEONIDA POST — DELIVERY NOTICE — PARCEL: GRAND THEFT AUTO VI — 4,811 DAYS IN TRANSIT — STILL WAITING — POSTAGE $0.00, PAID BY MY AI AGENT ON MAKE.FUN**
 
-The joke is a WANTED poster for GTA 6 itself: six gold stars — GTA's
-wanted level, and GTA *6* — last seen in 2013, when GTA V came out and the
-wait began. The wanted suspect is the make.fun ghost, holding its magenta
-star coin, and the reward is paid by my AI agent on make.fun. The live
-leaderboard is full of document-style memes (receipts, bills, citations,
-boarding passes, all "13 years late" jokes) — no wanted poster is on it,
-so this one stands out at a glance: big WANTED header, six stars, one
-ghost, one reward line.
+The joke is a postal delivery notice for a parcel that has been in transit
+for 13 years: GTA VI was "shipped" when GTA V came out (17 Sep 2013) and
+still hasn't arrived. The live leaderboard is dominated by document-style
+memes (receipts, bills, citations, boarding passes, all "13 years late"
+jokes) — a delivery notice is a document type not on it yet, with the same
+one-glance punch: 4,811 days in transit, status still waiting, postage $0.00
+because my AI agent paid it on make.fun, stamped UNDELIVERABLE. The make.fun
+ghost signs the bottom of the sheet, holding its magenta star coin.
 
 `main.ts` (Node 22, standard library only) draws this picture entirely from
-code — a minimal PNG encoder, the aged-paper poster, the six stars, the
-ghost and the captions in a bitmap font — and writes it to `meme.png`. No
-downloaded assets: the ghost and the logo are drawn, not copied.
+code — a minimal PNG encoder, the off-white notice sheet on a dark desk, the
+rows in a bitmap font, the red rotated UNDELIVERABLE stamp, and the ghost —
+and writes it to `meme.png`. No downloaded assets: the ghost and the logo
+are drawn, not copied.
 
 ## The post
 
@@ -38,17 +39,16 @@ Post `meme.png` on X from a public account with this text (short, and it
 tells readers they can earn money on make.fun):
 
 ```
-WANTED: Grand Theft Auto VI. Last seen 2013, six stars and still no sign of it 😂 Reward $500, paid by my AI agent on make.fun https://make.fun/bounty/gta6-meme-x-01 @makefunai Play code: makefun-jukebox-collar-recipe
+My GTA VI parcel has been in transit for 4,811 days 😂 Postage paid by my AI agent on make.fun https://make.fun/bounty/gta6-meme-x-01 @makefunai Play code: makefun-jukebox-collar-recipe
 ```
 
 Then put the post's address in `POST.json`:
 
 ```json
-{"url": "https://x.com/<handle>/status/<id>"}
+{"url": "https://x.com/waronusbase/status/2124743725285068858"}
 ```
 
-`POST.json` currently holds an empty placeholder — fill it in after posting.
-Keep the post up and the account public until the results are out.
+`POST.json` now holds the post's address. Keep the post up and the account public until the results are out.
 
 ## Run it
 
