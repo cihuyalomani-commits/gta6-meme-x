@@ -6,9 +6,12 @@
 // root to /output/POST.json, where the gate reads it. The run is fully
 // deterministic: the same input bytes always produce the same output bytes.
 //
-// The joke: GTA 6 has Bigfoot (Windah Basudara found him live in the swamp),
-// and my AI agent already clipped him for money. The make.fun ghost floats
-// in the scene holding its magenta star coin, with make.fun written under it.
+// The joke: a WANTED poster for Grand Theft Auto VI itself — six stars (GTA's
+// wanted level, and GTA *6*), last seen in 2013, with a $500 reward paid by
+// my AI agent on make.fun. The make.fun ghost is the wanted suspect, holding
+// its magenta star coin. No other wanted poster is on the live leaderboard:
+// it is full of document-style memes (receipts, bills, citations, boarding
+// passes), all "13 years late" jokes.
 //
 // Outside the grader's container, MAKEFUN_BOT_DIR and MAKEFUN_OUTPUT_DIR
 // stand in for /bot and /output:
@@ -33,8 +36,10 @@ type RGB = [number, number, number];
 const WHITE: RGB = [255, 255, 255];
 const BLACK: RGB = [0, 0, 0];
 const MAGENTA: RGB = [224, 33, 138];
-const BODY: RGB = [18, 12, 26]; // Bigfoot / tree silhouette
-const TREELINE: RGB = [23, 16, 46];
+const PAPER: RGB = [242, 226, 184]; // aged poster paper
+const GOLD: RGB = [255, 196, 40]; // wanted stars
+const RED: RGB = [176, 32, 32]; // last-seen / reward lines
+const NAVY: RGB = [30, 34, 62]; // mugshot backdrop
 
 const px = new Uint8Array(W * H * 3);
 
@@ -63,16 +68,6 @@ function fillCircle(cx: number, cy: number, r: number, c: RGB): void {
       const dx = x - cx;
       const dy = y - cy;
       if (dx * dx + dy * dy <= r2) setPx(x, y, c);
-    }
-  }
-}
-
-function fillEllipse(cx: number, cy: number, rx: number, ry: number, c: RGB): void {
-  for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
-    for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
-      const dx = (x - cx) / rx;
-      const dy = (y - cy) / ry;
-      if (dx * dx + dy * dy <= 1) setPx(x, y, c);
     }
   }
 }
@@ -136,18 +131,6 @@ function fillSparkle(cx: number, cy: number, long: number, short: number, c: RGB
     ],
     c,
   );
-}
-
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
-
-function mix(c1: RGB, c2: RGB, t: number): RGB {
-  return [
-    Math.round(lerp(c1[0], c2[0], t)),
-    Math.round(lerp(c1[1], c2[1], t)),
-    Math.round(lerp(c1[2], c2[2], t)),
-  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -224,12 +207,9 @@ function drawGlyph(ch: string, x: number, y: number, scale: number, c: RGB): voi
   }
 }
 
-// Centered text with a thick outline, meme style.
-function drawText(text: string, cx: number, y: number, scale: number, fg: RGB, ol: RGB): void {
-  const w = textWidth(text, scale);
-  const x0 = Math.round(cx - w / 2);
+function outlineOffsets(scale: number): Array<[number, number]> {
   const d = scale >= 8 ? 4 : scale >= 7 ? 3 : 2;
-  const offsets: Array<[number, number]> = [
+  return [
     [-d, -d],
     [0, -d],
     [d, -d],
@@ -239,7 +219,11 @@ function drawText(text: string, cx: number, y: number, scale: number, fg: RGB, o
     [0, d],
     [d, d],
   ];
-  for (const [dx, dy] of offsets) {
+}
+
+// Left-aligned text with a thick outline.
+function drawTextLeft(text: string, x0: number, y: number, scale: number, fg: RGB, ol: RGB): void {
+  for (const [dx, dy] of outlineOffsets(scale)) {
     let x = x0 + dx;
     for (const ch of text) {
       drawGlyph(ch, x, y + dy, scale, ol);
@@ -253,179 +237,87 @@ function drawText(text: string, cx: number, y: number, scale: number, fg: RGB, o
   }
 }
 
+// Centered text with a thick outline, meme style.
+function drawText(text: string, cx: number, y: number, scale: number, fg: RGB, ol: RGB): void {
+  drawTextLeft(text, Math.round(cx - textWidth(text, scale) / 2), y, scale, fg, ol);
+}
+
 // ---------------------------------------------------------------------------
-// Scene: Leonida swamp at sunset. Bigfoot wades in the water, the make.fun
-// ghost floats at the right holding its magenta star coin.
+// Scene: a WANTED poster. The make.fun ghost is the suspect, in a mugshot
+// frame under six gold wanted stars.
 // ---------------------------------------------------------------------------
 
-const HORIZON = 430;
-
-function drawSky(): void {
-  const stops: Array<[number, RGB]> = [
-    [0, [36, 27, 77]],
-    [0.35, [107, 45, 109]],
-    [0.65, [201, 79, 109]],
-    [0.85, [240, 138, 75]],
-    [1, [255, 196, 107]],
-  ];
-  for (let y = 0; y < HORIZON; y++) {
-    const t = y / HORIZON;
-    let c: RGB = stops[stops.length - 1][1];
-    for (let i = 0; i + 1 < stops.length; i++) {
-      if (t >= stops[i][0] && t <= stops[i + 1][0]) {
-        const f = (t - stops[i][0]) / (stops[i + 1][0] - stops[i][0]);
-        c = mix(stops[i][1], stops[i + 1][1], f);
-        break;
-      }
-    }
-    fillRect(0, y, W, 1, c);
-  }
-}
-
-function drawSun(): void {
-  // Glow rings, then the disc.
-  fillCircle(330, 390, 120, [242, 163, 94]);
-  fillCircle(330, 390, 95, [255, 210, 122]);
-  fillCircle(330, 390, 64, [255, 233, 168]);
-  // A couple of birds.
-  drawLine(650, 140, 662, 132, 3, BODY);
-  drawLine(662, 132, 674, 140, 3, BODY);
-  drawLine(700, 112, 710, 105, 3, BODY);
-  drawLine(710, 105, 720, 112, 3, BODY);
-  drawLine(760, 158, 770, 151, 3, BODY);
-  drawLine(770, 151, 780, 158, 3, BODY);
-}
-
-function drawTreeLine(): void {
-  // Jagged distant treeline along the horizon.
-  const peaks: Array<[number, number]> = [
-    [0, 448], [60, 424], [120, 444], [190, 422], [250, 446], [320, 420],
-    [390, 446], [460, 424], [530, 448], [600, 422], [670, 446], [740, 424],
-    [810, 448], [880, 422], [950, 446], [1020, 424], [1090, 446], [1150, 426],
-    [1200, 446],
-  ];
-  const pts: Array<[number, number]> = [[0, HORIZON + 24]];
-  for (const [x, y] of peaks) pts.push([x, y]);
-  pts.push([W, HORIZON + 24]);
-  fillPoly(pts, TREELINE);
-}
-
-function drawWater(): void {
-  for (let y = HORIZON; y < H; y++) {
-    const t = (y - HORIZON) / (H - HORIZON);
-    fillRect(0, y, W, 1, mix([27, 42, 58], [10, 18, 32], t));
-  }
-  // Sunset reflection under the sun.
-  const streaks: Array<[number, number, number, RGB]> = [
-    [292, 455, 60, [217, 138, 74]],
-    [318, 455, 90, [176, 106, 53]],
-    [352, 455, 55, [217, 138, 74]],
-    [305, 520, 45, [176, 106, 53]],
-    [338, 520, 70, [217, 138, 74]],
-    [322, 580, 40, [176, 106, 53]],
-  ];
-  for (const [x, y, h, c] of streaks) fillRect(x, y, 12, h, c);
-  // Ripples.
-  const ripples: Array<[number, number, number]> = [
-    [120, 480, 180], [620, 492, 220], [980, 486, 160], [80, 540, 150],
-    [700, 552, 240], [1050, 545, 120], [200, 610, 200], [820, 620, 180],
-    [40, 650, 160], [560, 648, 200],
-  ];
-  for (const [x, y, w] of ripples) fillRect(x, y, w, 2, [44, 66, 88]);
-}
-
-function drawCypress(x0: number, flip: boolean): void {
-  // Trunk and canopy at the frame edge, with hanging moss strands.
-  const s = flip ? -1 : 1;
-  fillRect(x0, 250, 44, 200, TREELINE);
-  fillCircle(x0 + 22, 260, 58, TREELINE);
-  fillCircle(x0 - 12, 305, 42, TREELINE);
-  fillCircle(x0 + 56, 300, 44, TREELINE);
-  const moss: Array<[number, number]> = [
-    [8, 42], [26, 30], [44, 48], [62, 26], [80, 38],
-  ];
-  for (const [dx, len] of moss) {
-    const x = flip ? x0 + 88 - dx : x0 + dx;
-    drawLine(x, 330, x, 330 + len, 2, TREELINE);
-  }
-  void s;
-}
-
-function drawBigfoot(): void {
-  // Legs in the water.
-  fillRect(438, 480, 28, 70, BODY);
-  fillRect(474, 480, 28, 70, BODY);
-  // Splash rings at the waterline.
-  fillEllipse(452, 452, 30, 6, [127, 168, 201]);
-  fillEllipse(488, 452, 26, 5, [127, 168, 201]);
-  fillCircle(428, 438, 4, [127, 168, 201]);
-  fillCircle(512, 436, 4, [127, 168, 201]);
-  // Arms.
-  drawLine(424, 345, 394, 452, 24, BODY);
-  drawLine(516, 345, 546, 452, 24, BODY);
-  // Torso and head.
-  fillEllipse(470, 400, 62, 105, BODY);
-  fillCircle(470, 285, 34, BODY);
-  // Glowing amber eyes.
-  fillCircle(458, 282, 4, [255, 179, 71]);
-  fillCircle(482, 282, 4, [255, 179, 71]);
-  // Sunset rim light on the right side: a continuous arc, not dots.
-  let prevT: [number, number] | null = null;
-  let prevH: [number, number] | null = null;
-  for (let a = -50; a <= 50; a += 5) {
-    const rad = (a * Math.PI) / 180;
-    const t: [number, number] = [470 + 62 * Math.cos(rad), 400 + 105 * Math.sin(rad)];
-    const h: [number, number] = [470 + 34 * Math.cos(rad), 285 + 34 * Math.sin(rad)];
-    if (prevT) drawLine(prevT[0], prevT[1], t[0], t[1], 3, [255, 158, 87]);
-    if (prevH) drawLine(prevH[0], prevH[1], h[0], h[1], 3, [255, 158, 87]);
-    prevT = t;
-    prevH = h;
-  }
-}
-
-function drawGhost(): void {
-  const cx = 930;
-  const cy = 280;
-  // Black outline, drawn slightly larger and lower, then the white body.
-  fillCircle(cx, cy, 75, BLACK);
-  fillRect(cx - 75, cy - 5, 150, 95, BLACK);
-  fillCircle(cx - 62, cy + 102, 24, BLACK);
-  fillCircle(cx, cy + 102, 24, BLACK);
-  fillCircle(cx + 62, cy + 102, 24, BLACK);
-  fillCircle(cx, cy, 70, WHITE);
-  fillRect(cx - 70, cy, 140, 85, WHITE);
-  fillCircle(cx - 62, cy + 98, 20, WHITE);
-  fillCircle(cx, cy + 98, 20, WHITE);
-  fillCircle(cx + 62, cy + 98, 20, WHITE);
+function drawGhostAt(cx: number, cy: number, s: number): void {
+  const R = (v: number): number => v * s;
+  // Black outline, drawn slightly larger, then the white body.
+  fillCircle(cx, cy, R(75), BLACK);
+  fillRect(cx - R(75), cy - R(5), R(150), R(95), BLACK);
+  fillCircle(cx - R(62), cy + R(102), R(24), BLACK);
+  fillCircle(cx, cy + R(102), R(24), BLACK);
+  fillCircle(cx + R(62), cy + R(102), R(24), BLACK);
+  fillCircle(cx, cy, R(70), WHITE);
+  fillRect(cx - R(70), cy, R(140), R(85), WHITE);
+  fillCircle(cx - R(62), cy + R(98), R(20), WHITE);
+  fillCircle(cx, cy + R(98), R(20), WHITE);
+  fillCircle(cx + R(62), cy + R(98), R(20), WHITE);
   // Two black four-pointed sparkle eyes.
-  fillSparkle(cx - 26, cy + 8, 17, 6, BLACK);
-  fillSparkle(cx + 26, cy + 8, 17, 6, BLACK);
+  fillSparkle(cx - R(26), cy + R(8), R(17), R(6), BLACK);
+  fillSparkle(cx + R(26), cy + R(8), R(17), R(6), BLACK);
   // Round little hand, holding the coin.
-  fillCircle(cx + 62, cy + 62, 17, BLACK);
-  fillCircle(cx + 62, cy + 62, 13, WHITE);
-  drawLine(cx + 66, cy + 68, 1006, 372, 10, BLACK);
-  drawLine(cx + 66, cy + 68, 1006, 372, 6, WHITE);
+  fillCircle(cx + R(62), cy + R(62), R(17), BLACK);
+  fillCircle(cx + R(62), cy + R(62), R(13), WHITE);
+  drawLine(cx + R(66), cy + R(68), cx + R(76), cy + R(92), R(10), BLACK);
+  drawLine(cx + R(66), cy + R(68), cx + R(76), cy + R(92), R(6), WHITE);
   // Magenta coin with a white star.
-  fillCircle(1012, 384, 34, BLACK);
-  fillCircle(1012, 384, 30, MAGENTA);
-  fillStar(1012, 384, 17, 7, WHITE);
-  // The name under the ghost.
-  drawText('make.fun', cx, 420, 5, WHITE, BLACK);
+  fillCircle(cx + R(82), cy + R(104), R(34), BLACK);
+  fillCircle(cx + R(82), cy + R(104), R(30), MAGENTA);
+  fillStar(cx + R(82), cy + R(104), R(17), R(7), WHITE);
 }
 
 function drawScene(): void {
-  drawSky();
-  drawSun();
-  drawTreeLine();
-  drawWater();
-  drawCypress(0, false);
-  drawCypress(1156, true);
-  drawBigfoot();
-  drawGhost();
-  // Captions.
-  drawText('GTA 6 HAS BIGFOOT', 600, 28, 8, WHITE, BLACK);
-  drawText('MY AI AGENT ALREADY', 600, 562, 7, WHITE, BLACK);
-  drawText('CLIPPED HIM FOR MONEY', 600, 618, 7, WHITE, BLACK);
+  // Aged paper.
+  fillRect(0, 0, W, H, PAPER);
+  // Outer black frame + thin inner frame.
+  fillRect(0, 0, W, 14, BLACK);
+  fillRect(0, H - 14, W, 14, BLACK);
+  fillRect(0, 0, 14, H, BLACK);
+  fillRect(W - 14, 0, 14, H, BLACK);
+  fillRect(22, 22, W - 44, 2, BLACK);
+  fillRect(22, H - 24, W - 44, 2, BLACK);
+  fillRect(22, 22, 2, H - 44, BLACK);
+  fillRect(W - 24, 22, 2, H - 44, BLACK);
+
+  // Header.
+  drawText("LEONIDA COUNTY SHERIFF'S OFFICE", 600, 34, 3, BLACK, PAPER);
+  drawText('WANTED', 600, 62, 15, BLACK, PAPER);
+
+  // Six gold wanted stars, one for each GTA.
+  const starXs = [200, 360, 520, 680, 840, 1000];
+  for (const x of starXs) {
+    fillStar(x, 200, 34, 14, BLACK);
+    fillStar(x, 200, 28, 12, GOLD);
+  }
+
+  // Mugshot frame with the make.fun ghost as the suspect.
+  fillRect(440, 240, 320, 216, NAVY);
+  fillRect(440, 240, 320, 4, BLACK);
+  fillRect(440, 452, 320, 4, BLACK);
+  fillRect(440, 240, 4, 216, BLACK);
+  fillRect(756, 240, 4, 216, BLACK);
+  drawGhostAt(600, 340, 0.9);
+
+  // The charge, the last sighting, the reward.
+  drawText('GRAND THEFT AUTO VI', 600, 468, 6, BLACK, PAPER);
+  drawText('LAST SEEN: 2013', 600, 520, 5, RED, PAPER);
+  drawText('REWARD: $500', 600, 564, 6, RED, PAPER);
+
+  // The payoff line: make.fun in magenta so it cannot be missed.
+  const line = 'PAID BY MY AI AGENT ON make.fun';
+  const part1 = 'PAID BY MY AI AGENT ON ';
+  const scale = 4;
+  const x0 = Math.round(600 - textWidth(line, scale) / 2);
+  drawTextLeft(part1, x0, 614, scale, BLACK, PAPER);
+  drawTextLeft('make.fun', x0 + part1.length * 6 * scale, 614, scale, MAGENTA, PAPER);
 }
 
 // ---------------------------------------------------------------------------

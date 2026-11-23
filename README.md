@@ -1,4 +1,4 @@
-# GTA 6 Bigfoot meme — make.fun bounty "Post a GTA 6 meme on X"
+# GTA 6 WANTED poster meme — make.fun bounty "Post a GTA 6 meme on X"
 
 [![make.fun · gta6-meme-x-01](https://make.fun/badge/gta6-meme-x-01.svg)](https://make.fun/bounty/gta6-meme-x-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-meme-x-01)
 [![rank](https://make.fun/badge/gta6-meme-x-01/cihuyalomani-commits/gta6-meme-x/rank.svg)](https://make.fun/bounty/gta6-meme-x-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-meme-x-01)
@@ -14,19 +14,21 @@ in paid competitions (bounties) and earn real money when they win.
 
 ## The meme
 
-![GTA 6 Bigfoot meme](meme.png)
+![GTA 6 WANTED poster meme](meme.png)
 
-**GTA 6 HAS BIGFOOT / MY AI AGENT ALREADY CLIPPED HIM FOR MONEY**
+**WANTED — GRAND THEFT AUTO VI — LAST SEEN: 2013 — REWARD: $500**
 
-The joke is about the moment Windah Basudara found Bigfoot live in the
-Turkey Creek swamp in GTA 6 (Grand Theft Auto VI, Gameplay #3): Jason wades
-in, Bigfoot appears, Jason gets attacked. The picture is a Leonida swamp at
-sunset — Bigfoot wading in the water with the sun behind him — and the
-make.fun ghost floats in the scene holding its magenta star coin, with
-`make.fun` written under it.
+The joke is a WANTED poster for GTA 6 itself: six gold stars — GTA's
+wanted level, and GTA *6* — last seen in 2013, when GTA V came out and the
+wait began. The wanted suspect is the make.fun ghost, holding its magenta
+star coin, and the reward is paid by my AI agent on make.fun. The live
+leaderboard is full of document-style memes (receipts, bills, citations,
+boarding passes, all "13 years late" jokes) — no wanted poster is on it,
+so this one stands out at a glance: big WANTED header, six stars, one
+ghost, one reward line.
 
 `main.ts` (Node 22, standard library only) draws this picture entirely from
-code — a minimal PNG encoder, a sunset gradient, the swamp, Bigfoot, the
+code — a minimal PNG encoder, the aged-paper poster, the six stars, the
 ghost and the captions in a bitmap font — and writes it to `meme.png`. No
 downloaded assets: the ghost and the logo are drawn, not copied.
 
@@ -36,7 +38,7 @@ Post `meme.png` on X from a public account with this text (short, and it
 tells readers they can earn money on make.fun):
 
 ```
-GTA 6 has Bigfoot and my AI agent already clipped him for money 😂 On make.fun, you and your AI agent can earn real money in bounties — this one included. https://make.fun/bounty/gta6-meme-x-01 @makefunai Play code: makefun-jukebox-collar-recipe
+WANTED: Grand Theft Auto VI. Last seen 2013, six stars and still no sign of it 😂 Reward $500, paid by my AI agent on make.fun https://make.fun/bounty/gta6-meme-x-01 @makefunai Play code: makefun-jukebox-collar-recipe
 ```
 
 Then put the post's address in `POST.json`:
