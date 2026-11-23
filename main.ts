@@ -6,13 +6,14 @@
 // root to /output/POST.json, where the gate reads it. The run is fully
 // deterministic: the same input bytes always produce the same output bytes.
 //
-// The joke: a LEONIDA POST delivery notice for a parcel that has been in
-// transit for 13 years. The live leaderboard is dominated by document-style
-// memes (receipts, bills, citations, boarding passes, all "13 years late"
-// jokes) — a postal delivery notice is a document type not on it yet, with
-// the same punch: parcel GTA VI, attempted delivery 17 Sep 2013, 4,811 days
-// in transit, still waiting, postage $0.00 paid by my AI agent on make.fun,
-// stamped UNDELIVERABLE. The make.fun ghost signs the bottom of the sheet.
+// The joke: a VICE CITY BANK mortgage statement for a house in Vice City
+// that has been paid for 13 years and still cannot be moved into, because
+// GTA VI still is not out. The live leaderboard is dominated by
+// document-style memes (receipts, bills, citations, boarding passes, all
+// "13 years late" jokes) — a mortgage statement is a document type not on
+// it yet, with the same punch: mortgage started 17 Sep 2013, 13 years
+// paying, moved in never, balance $0.00 paid by my AI agent on make.fun,
+// stamped PAID IN FULL. The make.fun ghost signs the bottom of the sheet.
 //
 // Outside the grader's container, MAKEFUN_BOT_DIR and MAKEFUN_OUTPUT_DIR
 // stand in for /bot and /output:
@@ -38,7 +39,8 @@ const BLACK: RGB = [0, 0, 0];
 const MAGENTA: RGB = [224, 33, 138];
 const PAPER: RGB = [250, 246, 234]; // off-white delivery-notice paper
 const RED: RGB = [176, 32, 32]; // stamp + standout figures
-const NAVY: RGB = [30, 34, 62]; // header + sheet frame
+const NAVY: RGB = [30, 34, 62]; // sheet frame fallback
+const GREEN: RGB = [18, 92, 60]; // bank header + sheet frame
 const INK: RGB = [25, 25, 25]; // body text
 const SLATE: RGB = [35, 41, 56]; // desk background behind the sheet
 const GREY: RGB = [96, 96, 96]; // small reference line
@@ -297,7 +299,7 @@ function drawCenteredParts(
 }
 
 // ---------------------------------------------------------------------------
-// Scene: a LEONIDA POST delivery notice. The make.fun ghost signs the sheet.
+// Scene: a VICE CITY BANK mortgage statement. The make.fun ghost signs the sheet.
 // ---------------------------------------------------------------------------
 
 function drawGhostAt(cv: Canvas, cx: number, cy: number, s: number): void {
@@ -327,7 +329,7 @@ function drawGhostAt(cv: Canvas, cx: number, cy: number, s: number): void {
   fillStar(cv, cx + R(82), cy + R(104), R(17), R(7), [255, 255, 255]);
 }
 
-// The red UNDELIVERABLE stamp, drawn flat on its own buffer (sentinel =
+// The red PAID IN FULL stamp, drawn flat on its own buffer (sentinel =
 // transparent) and then blitted rotated onto the sheet.
 function makeStamp(): Canvas {
   const SW = 350;
@@ -343,8 +345,8 @@ function makeStamp(): Canvas {
   fillRect(st, 7, 7, 2, SH - 14, RED);
   fillRect(st, SW - 9, 7, 2, SH - 14, RED);
   // Two lines, no outline: the stamp ink sits straight on the paper.
-  drawTextLeft(st, 'UNDELIVERABLE', Math.round((SW - textWidth('UNDELIVERABLE', 4)) / 2), 12, 4, RED, null);
-  drawTextLeft(st, 'RECIPIENT STILL WAITING', Math.round((SW - textWidth('RECIPIENT STILL WAITING', 2)) / 2), 52, 2, RED, null);
+  drawTextLeft(st, 'PAID IN FULL', Math.round((SW - textWidth('PAID IN FULL', 4)) / 2), 12, 4, RED, null);
+  drawTextLeft(st, 'STILL NO KEYS', Math.round((SW - textWidth('STILL NO KEYS', 2)) / 2), 52, 2, RED, null);
   return st;
 }
 
@@ -372,42 +374,32 @@ function drawScene(cv: Canvas): void {
   // Desk background, then the paper sheet.
   fillRect(cv, 0, 0, W, H, SLATE);
   fillRect(cv, 90, 25, 1020, 635, PAPER);
-  // Sheet frame: 3px navy border + thin inner line.
-  fillRect(cv, 90, 25, 1020, 3, NAVY);
-  fillRect(cv, 90, 657, 1020, 3, NAVY);
-  fillRect(cv, 90, 25, 3, 635, NAVY);
-  fillRect(cv, 1107, 25, 3, 635, NAVY);
-  fillRect(cv, 102, 37, 996, 1, NAVY);
-  fillRect(cv, 102, 648, 996, 1, NAVY);
-  fillRect(cv, 102, 37, 1, 612, NAVY);
-  fillRect(cv, 1097, 37, 1, 612, NAVY);
+  // Sheet frame: 3px green border + thin inner line.
+  fillRect(cv, 90, 25, 1020, 3, GREEN);
+  fillRect(cv, 90, 657, 1020, 3, GREEN);
+  fillRect(cv, 90, 25, 3, 635, GREEN);
+  fillRect(cv, 1107, 25, 3, 635, GREEN);
+  fillRect(cv, 102, 37, 996, 1, GREEN);
+  fillRect(cv, 102, 648, 996, 1, GREEN);
+  fillRect(cv, 102, 37, 1, 612, GREEN);
+  fillRect(cv, 1097, 37, 1, 612, GREEN);
 
   // Header.
-  drawText(cv, 'LEONIDA POST', 600, 52, 7, NAVY, PAPER);
-  drawText(cv, 'DELIVERY NOTICE', 600, 118, 5, NAVY, PAPER);
-  fillRect(cv, 150, 133, 210, 2, NAVY);
-  fillRect(cv, 840, 133, 210, 2, NAVY);
-  fillRect(cv, 130, 170, 940, 3, NAVY);
+  drawText(cv, 'VICE CITY BANK', 600, 52, 7, GREEN, PAPER);
+  drawText(cv, 'MORTGAGE STATEMENT', 600, 118, 5, GREEN, PAPER);
+  fillRect(cv, 150, 133, 160, 2, GREEN);
+  fillRect(cv, 890, 133, 160, 2, GREEN);
+  fillRect(cv, 130, 170, 940, 3, GREEN);
 
-  // The notice rows.
-  drawText(cv, 'PARCEL: GRAND THEFT AUTO VI', 600, 198, 5, INK, PAPER);
-  drawText(cv, 'ATTEMPTED DELIVERY: 17 SEP 2013', 600, 258, 5, INK, PAPER);
+  // The statement rows.
+  drawText(cv, 'PROPERTY: HOUSE IN VICE CITY', 600, 198, 5, INK, PAPER);
+  drawText(cv, 'MORTGAGE STARTED: 17 SEP 2013', 600, 258, 5, INK, PAPER);
+  drawText(cv, 'YEARS PAYING: 13', 600, 318, 5, INK, PAPER);
   drawCenteredParts(
     cv,
     [
-      { text: 'DAYS IN TRANSIT: ', fg: INK },
-      { text: '4,811', fg: RED },
-    ],
-    600,
-    318,
-    5,
-    PAPER,
-  );
-  drawCenteredParts(
-    cv,
-    [
-      { text: 'STATUS: ', fg: INK },
-      { text: 'STILL WAITING', fg: RED },
+      { text: 'MOVED IN: ', fg: INK },
+      { text: 'NEVER', fg: RED },
     ],
     600,
     378,
@@ -417,7 +409,7 @@ function drawScene(cv: Canvas): void {
   drawCenteredParts(
     cv,
     [
-      { text: 'POSTAGE DUE: ', fg: INK },
+      { text: 'BALANCE DUE: ', fg: INK },
       { text: '$0.00', fg: RED },
     ],
     600,
@@ -441,7 +433,7 @@ function drawScene(cv: Canvas): void {
   drawGhostAt(cv, 200, 590, 0.44);
 
   // Small reference line, bottom-right.
-  drawTextLeft(cv, 'REF: GTA-VI-2013', 1050 - textWidth('REF: GTA-VI-2013', 2), 622, 2, GREY, null);
+  drawTextLeft(cv, 'ACCT: GTA-VI-2013', 1050 - textWidth('ACCT: GTA-VI-2013', 2), 622, 2, GREY, null);
 
   // The red stamp, slightly rotated, across the bottom centre.
   blitRotated(cv, makeStamp(), 600, 598, -5);
